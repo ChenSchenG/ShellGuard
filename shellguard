@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# ShellGuard CLI — auto-selects venv python if available
+_SG_VENV="$HOME/.shellguard/venv/bin/python"
+_SG_LIB="$HOME/.shellguard/lib"
+
+if [ -x "$_SG_VENV" ]; then
+    exec "$_SG_VENV" "$_SG_LIB/shellguard_core/_main.py" "$@"
+else
+    exec python3 "$_SG_LIB/shellguard_core/_main.py" "$@"
+fi

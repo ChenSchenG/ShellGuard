@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""
+shellguard-log — Minimal shell hook logger.
+Called as a background process by the shell hook after each command.
+Appends one JSON line to ~/.shellguard/history.jsonl.
+
+Usage:
+    shellguard-log --cmd "ls -la" --cwd "/home/user" --exit 0
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+SHELLGUARD_DIR = Path.home() / ".shellguard"
+HISTORY_PATH = SHELLGUARD_DIR / "history.jsonl"
+
+# Commands to skip logging (self-referential or noisy)
+SKIP_PREFIXES = (
+    "shellguard",
+    "shellguard-log",
+    "history",
+    "",
+)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--cmd", default="")
+    parser.add_argument("--cwd", default="")
+    parser.add_argument("--exit", dest="exit_code", type=int, default=0)
+    args = parser.parse_args()
+
+    cmd = args.cmd.strip()
+
+    # Filter empty or self-referential commands
+    if not cmd:
+        return
+    for prefix in SKIP_PREFIXES:
+        if cmd == prefix or cmd.startswith(prefix + " ") or cmd.startswith(prefix + "\t"):
+            if prefix:  # skip empty prefix check here
+                return
+
+    # Also skip if command is just whitespace
+    if not cmd:
+        return
+
+    SHELLGUARD_DIR.mkdir(parents=True, exist_ok=True)
+
+    record = {
+        "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "cmd": cmd,
+        "cwd": args.cwd,
+        "exit_code": args.exit_code,
+    }
+
+    try:
+        with open(HISTORY_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception:
+        pass  # Silently ignore errors — must not affect user's shell
+
+
+if __name__ == "__main__":
+    main()
