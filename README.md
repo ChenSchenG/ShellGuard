@@ -61,7 +61,7 @@
 
 ```bash
 git clone https://github.com/yourname/shellguard.git
-cd shellguard
+cd ShellGuard
 bash install.sh
 ```
 
